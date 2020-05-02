@@ -1,5 +1,7 @@
 const express = require('express');
 const app = express();
+//Importando routes
+const routes = require('./routes');
 //importando o morgan
 const morgan = require('morgan');
 
@@ -9,8 +11,6 @@ const morgan = require('morgan');
 //importar módulo de Segurança (cors)
 const cors = require('cors');
 
-const rotaProdutos = require('../routes/produtos');
-const rotaPedidos = require('../routes/pedidos');
 
 //Metodo de Teste 
 /*
@@ -53,6 +53,13 @@ app.use(morgan('dev'));
 //Sem Importar Body Parser
 //Nós Temos q informar para o app(express) que estaremos a usar JSON para as Request Body
 app.use(express.json());
+
+//Serve para express também lidar com requisições URLENCODED (Facilita Upload de arquivos) 
+app.use(express.urlencoded({ extended: true }));
+
+//Usar rotas do arquivo routes.js
+app.use(routes);
+
 //
 
 
@@ -82,28 +89,19 @@ app.use((request, respons, next) => {
 
 
 
-
-//Rotas
-app.use('/produtos', rotaProdutos);
-app.use('/pedidos', rotaPedidos);
-//
-
-
-
-
 // Podemos trocar esse Tratamento de Erros pelo Celebrate
 //
 //Tratamento para quando o Morgan não encontrou nenhuma rota depois de passar pelas de cima
 //Quando não encontra rota, entra aqui:
-app.use((request, response, next) => {
+app.use((req, res, next) => {
     const erro = new Error('Não encontrado');
     erro.status = 404;
     next(erro);
 });
 
 //Tratamento de erro
-app.use((error, request, respons, next) => {
-    respons.status(error.status || 500);
+app.use((error, req, res, next) => {
+    res.status(error.status || 500);
     return this.response.send({
         erro: {
             mensagem: error.message
