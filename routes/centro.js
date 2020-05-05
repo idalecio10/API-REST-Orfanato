@@ -18,10 +18,10 @@ router.get('/', (req, res, next) => {
         }
         conn.query(
             `SELECT     centro.idCentro,
-                        centro.Nome,
+                        centro.NomeCentro,
                         centro.Endereco,
                         admin.idAdmin,
-                        admin.Nome
+                        admin.NomeAdmin
             FROM        centro
             INNER JOIN  admin
                     ON  admin.idAdmin = centro.idAdmin;`,
@@ -38,12 +38,12 @@ router.get('/', (req, res, next) => {
                     centros: result.map(centro => {
                         return {
                             idCentro: centro.idCentro,
-                            Nome: centro.Nome,
+                            Nome: centro.NomeCentro,
                             Endereco: centro.Endereco,
 
                             admin: {
                                 idAdmin: centro.idAdmin,
-                                Nome: centro.Nome
+                                Nome: centro.NomeAdmin
                             },
                             
                             
@@ -101,8 +101,8 @@ router.post('/', (req, res, next) =>{
 
                 //INSERIR NO BANCO DE DADO
                 conn.query(
-                    'INSERT INTO centro (idAdmin, Nome, Endereco) VALUES (?,?,?)',
-                    [req.body.idAdmin, req.body.Nome, req.body.Endereco],
+                    'INSERT INTO centro (idAdmin, NomeCentro, Endereco) VALUES (?,?,?)',
+                    [req.body.idAdmin, req.body.NomeCentro, req.body.Endereco],
                     (error, result, field) => {
                         conn.release();
         
@@ -117,7 +117,7 @@ router.post('/', (req, res, next) =>{
                             centroCriado: {
                                 idCentro: result.idCentro,
                                 idAdmin: req.idAdmin,
-                                Nome: req.body.Nome,
+                                Nome: req.body.NomeCentro,
                                 Endereco: req.body.Endereco,
                                 request: {
                                     tipo: 'GET',
@@ -165,7 +165,7 @@ router.get('/:idCentro', (req, res, next) => {
                     centroCriado: {
                         idCentro: result[0].idCentro,
                         idAdmin: result[0].idAdmin,
-                        Nome: result[0].Nome,
+                        Nome: result[0].NomeCentro,
                         Endereco: result[0].Endereco,
                         request: {
                             tipo: 'GET ',
@@ -193,11 +193,11 @@ router.patch('/', (req, res, next) =>{
         
         conn.query(
             `UPDATE centro
-                SET Nome       = ?,
+                SET NomeCentro = ?,
                     Endereco   = ?
                 WHERE idCentro = ?`,                
             [
-                req.body.Nome, 
+                req.body.NomeCentro, 
                 req.body.Endereco, 
                 req.body.idCentro
             ],
@@ -215,7 +215,7 @@ router.patch('/', (req, res, next) =>{
                     mensagem: 'Centro atualizado com sucesso',
                     centroAtualizado: {
                         idCentro: req.body.idCentro,
-                        Nome: req.body.Nome,
+                        Nome: req.body.NomeCentro,
                         Endereco: req.body.Endereco,
                         request: {
                             tipo: 'PATCH',
@@ -241,7 +241,7 @@ router.delete('/', (req, res, next) =>{
             }) 
         }
         conn.query(
-            'DELETE FROM centro WHERE idCentro = ?',                
+            `SELECT * FROM centro WHERE idCentro = ?`,                
             [ req.body.idCentro],
 
             (error, result, field) => {
@@ -250,7 +250,7 @@ router.delete('/', (req, res, next) =>{
                 if (error) {
                     return res.status(500).send({
                         error: error
-                    });
+                    })
                 }
 
                 if (result.length == 0) {
@@ -259,21 +259,35 @@ router.delete('/', (req, res, next) =>{
                     })
                 }
 
-                const response = {
-                    mensagem: 'Centro removido com sucesso',
-                    request: {
-                        tipo: 'DELETE',
-                        descricao: 'Apaga um Centro',
-                        url: 'http://localhost:3333/centros',
-                        body: {
-                            idAdmin: 'Number',
-                            Nome: 'String',
-                            Endereco: 'String'
-                        }
-                    }
-                }
+                conn.query(
+                    'DELETE FROM centro WHERE idCentro = ?',                
+                    [ req.body.idCentro],
 
-                return res.status(202).send(response);
+                    (error, result, field) => {
+                        conn.release();
+
+                        if (error) {
+                            return res.status(500).send({
+                                error: error
+                            });
+                        }
+
+                        const response = {
+                            mensagem: 'Centro removido com sucesso',
+                            request: {
+                                tipo: 'DELETE',
+                                descricao: 'Apaga um Centro',
+                                url: 'http://localhost:3333/centros',
+                                body: {
+                                    idAdmin: 'Number',
+                                    Nome: 'String',
+                                    Endereco: 'String'
+                                }
+                            }
+                        }
+                        return res.status(202).send(response);
+                    }
+                )
             }
         )
     })

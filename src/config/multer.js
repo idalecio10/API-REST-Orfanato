@@ -21,6 +21,7 @@ module.exports = {
 
                 //hash serve para converter os 16 bits em caracteres hexadecimal(letras e números) e logo em seguida aparece o nome original da imagem
                 const fileName = `${hash.toString('hex')}-${file.originalname}`;
+                //const fileNamee = `${new Date().toISOString()}-${file.originalname}`;
 
                 cb(null, fileName);
             });

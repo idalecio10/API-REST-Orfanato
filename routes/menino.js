@@ -22,7 +22,18 @@ router.get('/', (req, res, next) => {
             }) 
         }
         conn.query(
-            'SELECT * FROM menino;',
+            `SELECT     menino.idMenino,
+                        menino.NomeMenino,
+                        menino.Apelidos,
+                        menino.DataNascimento,
+                        menino.DataCadastro,
+                        menino.Sexo,
+                        menino.Foto,
+                        gestor.idGestor,
+                        gestor.NomeGestor 
+            FROM        menino
+            INNER JOIN  gestor
+                    ON  gestor.idGestor = menino.idGestor;`,
             (error, result, fields) =>  {
                 if (error) { 
                     return res.status(500).send({ 
@@ -37,12 +48,18 @@ router.get('/', (req, res, next) => {
                         return {
                             idMenino: menino.idMenino,
                             idGestor: menino.idGestor,
-                            Nome: menino.Nome,
+                            Nome: menino.NomeMenino,
                             Apelidos: menino.Apelidos,
                             DataNascimento: menino.DataNascimento,
                             DataCadastro: menino.DataCadastro,
                             Sexo: menino.Sexo,
                             Foto: menino.Foto,
+
+                            gestor: {
+                                idGestor: menino.idAdmin,
+                                Nome: menino.NomeGestor
+                            },
+
                             request: {
                                 tipo: 'GET',
                                 descricao: 'Retorna os detalhes de todos os Meninos',
@@ -98,8 +115,8 @@ router.post('/', multer(multerConfig).single("Foto"), (req, res, next) =>{
 
                 //INSERIR NO BANCO DE DADO
                 conn.query(
-                    `INSERT INTO menino (idGestor, Nome, Apelidos, DataNascimento, DataCadastro, Sexo, Foto) VALUES (?,?,?,?,?,?,?)`,
-                    [req.body.idGestor, req.body.Nome, req.body.Apelidos, req.body.DataNascimento, req.body.DataCadastro, 
+                    `INSERT INTO menino (idGestor, NomeMenino, Apelidos, DataNascimento, DataCadastro, Sexo, Foto) VALUES (?,?,?,?,now(),?,?)`,
+                    [req.body.idGestor, req.body.NomeMenino, req.body.Apelidos, req.body.DataNascimento,
                         req.body.Sexo, req.file.path],
                     (error, result, field) => {
                         conn.release();
@@ -115,12 +132,12 @@ router.post('/', multer(multerConfig).single("Foto"), (req, res, next) =>{
                             meninoCriado: {
                                 idMenino: req.idMenino,
                                 idGestor: result.idGestor,
-                                Nome: req.body.Nome,
+                                Nome: req.body.NomeMenino,
                                 Apelidos: req.body.Apelidos,
                                 DataNascimento: req.body.DataNascimento,
                                 DataCadastro: req.body.DataCadastro,
                                 Sexo: req.body.Sexo,
-                                Foto: req.body.Foto,
+                                Foto: req.file.path,
                                 request: {
                                     tipo: 'GET',
                                     descricao: 'Retorna todos os MENINOS',
@@ -163,10 +180,10 @@ router.get('/:idMenino', (req, res, next) => {
                 }
 
                 const response = {
-                    centroCriado: {
+                    meninoCriado: {
                         idMenino: result[0].idMenino,
                         idGestor: result[0].idGestor,
-                        Nome: result[0].Nome,
+                        Nome: result[0].NomeMenino,
                         Apelidos: result[0].Apelidos,
                         DataNascimento: result[0].DataNascimento,
                         DataCadastro: result[0].DataCadastro,
@@ -195,21 +212,18 @@ router.patch('/', (req, res, next) =>{
                 error: error
             }) 
         }
-        
         conn.query(
             `UPDATE menino
-                SET Nome            = ?,
+                SET NomeMenino      = ?,
                     Apelidos        = ?,
                     DataNascimento  = ?,
-                    DataCadastro    = ?,
                     Sexo            = ?,
-                    Foto            = ?,
+                    Foto            = ?
                 WHERE idMenino      = ?`,                
             [
-                req.body.Nome, 
+                req.body.NomeMenino, 
                 req.body.Apelidos,
                 req.body.DataNascimento,
-                req.body.DataCadastro,
                 req.body.Sexo,
                 req.body.Foto, 
                 req.body.idMenino
@@ -226,13 +240,12 @@ router.patch('/', (req, res, next) =>{
 
                 const response = {
                     mensagem: 'Menino atualizado com sucesso',
-                    centroAtualizado: {
+                    meninoAtualizado: {
                         idMenino: req.body.idMenino,
                         idGestor: req.body.idGestor,
-                        Nome: req.body.Nome,
+                        Nome: req.body.NomeMenino,
                         Apelidos: req.body.Apelidos,
                         DataNascimento: req.body.DataNascimento,
-                        DataCadastro: req.body.DataCadastro,
                         Sexo: req.body.Sexo,
                         Foto: req.body.Foto,
                         request: {
@@ -259,7 +272,7 @@ router.delete('/', (req, res, next) =>{
             }) 
         }
         conn.query(
-            'DELETE FROM menino WHERE idMenino = ?',                
+            `SELECT * FROM menino WHERE idMenino = ?`,                
             [ req.body.idMenino],
 
             (error, result, field) => {
@@ -268,7 +281,7 @@ router.delete('/', (req, res, next) =>{
                 if (error) {
                     return res.status(500).send({
                         error: error
-                    });
+                    })
                 }
 
                 if (result.length == 0) {
@@ -277,25 +290,39 @@ router.delete('/', (req, res, next) =>{
                     })
                 }
 
-                const response = {
-                    mensagem: 'Menino removido com sucesso',
-                    request: {
-                        tipo: 'DELETE',
-                        descricao: 'Apaga um Menino',
-                        url: 'http://localhost:3333/menino',
-                        body: {
-                            idGestor: 'Number',
-                            Nome: 'String',
-                            Apelidos: 'String',
-                            DataNascimento: 'String',
-                            DataCadastro: 'String',
-                            Sexo: 'String',
-                            Foto: 'String',
-                        }
-                    }
-                }
+                conn.query(
+                    `DELETE FROM menino WHERE idMenino = ?`,                
+                    [ req.body.idMenino],
 
-                return res.status(202).send(response);
+                    (error, result, field) => {
+                        conn.release();
+
+                        if (error) {
+                            return res.status(500).send({
+                                error: error
+                            })
+                        }
+
+                        const response = {
+                            mensagem: 'Menino removido com sucesso',
+                            request: {
+                                tipo: 'DELETE',
+                                descricao: 'Apaga um Menino',
+                                url: 'http://localhost:3333/menino',
+                                body: {
+                                    idGestor: 'Number',
+                                    Nome: 'String',
+                                    Apelidos: 'String',
+                                    DataNascimento: 'String',
+                                    DataCadastro: 'String',
+                                    Sexo: 'String',
+                                    Foto: 'String',
+                                }
+                            }
+                        }
+                        return res.status(202).send(response);
+                    }
+                )
             }
         )
     })

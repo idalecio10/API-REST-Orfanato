@@ -3,6 +3,9 @@ const router = express.Router();
 //Importar Conexão mysql
 const mysql = require('../mysql').pool;
 
+//Importar Criptografia Hash(bcrypt)
+const bcrypt = require('bcrypt');
+
 
 //RETORNA TODOS OS CENTROS
 router.get('/', (req, res, next) => {
@@ -18,7 +21,7 @@ router.get('/', (req, res, next) => {
         }
         conn.query(
             `SELECT     gestor.idGestor,
-                        gestor.Nome,
+                        gestor.NomeGestor,
                         gestor.Senha,
                         gestor.Login,
                         gestor.Email,
@@ -29,9 +32,9 @@ router.get('/', (req, res, next) => {
                         gestor.Sexo,
                         gestor.Foto,
                         admin.idAdmin,
-                        admin.Nome,
+                        admin.NomeAdmin,
                         centro.idCentro,
-                        centro.Nome
+                        centro.NomeCentro
             FROM        gestor
             INNER JOIN  admin
                     ON  admin.idAdmin = gestor.idAdmin
@@ -50,7 +53,7 @@ router.get('/', (req, res, next) => {
                     gestores: result.map(gestor => {
                         return {
                             idGestor: gestor.idGestor,
-                            Nome: gestor.Nome,
+                            Nome: gestor.NomeGestor,
                             Senha: gestor.Senha,
                             Login: gestor.Login,
                             Email: gestor.Email,
@@ -63,12 +66,12 @@ router.get('/', (req, res, next) => {
 
                             admin: {
                                 idAdmin: gestor.idAdmin,
-                                Nome: gestor.Nome
+                                Nome: gestor.NomeAdmin
                             },
                             
                             centro: {
                                 idCentro: gestor.idCentro,
-                                Nome: gestor.Nome
+                                Nome: gestor.NomeCentro
                             },
                             
                             request: {
@@ -141,51 +144,79 @@ router.post('/', (req, res, next) =>{
                             })
                         }
 
-                    //INSERIR NO BANCO DE DADO
-                    conn.query(
-                        `INSERT INTO gestor (idAdmin, idCentro, Nome, Senha, Login, Email, Celular1, Celular2, Celular3, Endereco,
-                            Sexo, Foto) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)`,
-                        [req.body.idAdmin, req.body.idCentro, req.body.Nome, req.body.Senha, req.body.Login, req.body.Email, req.body.Celular1, 
-                            req.body.Celular2, req.body.Celular3, req.body.Endereco, req.body.Sexo, req.body.Foto],
-                        (error, result, field) => {
-                            conn.release();
-            
-                            if (error) {
-                                return res.status(500).send({
-                                    error: error
-                                });
-                            }
-            
-                            const response = {
-                                mensagem: 'Gestor inserido com sucesso',
-                                gestorCriado: {
-                                    idGestor: result.idGestor,
-                                    idAdmin: req.idAdmin,
-                                    idCentro: req.idCentro,
-                                    Nome: req.body.Nome,
-                                    Senha: req.body.Senha,
-                                    Login: req.body.Login,
-                                    Email: req.body.Email,
-                                    Celular1: req.body.Celular1,
-                                    Celular2: req.body.Celular2,
-                                    Celular3: req.body.Celular3,
-                                    Endereco: req.body.Endereco,
-                                    Sexo: req.body.Sexo,
-                                    Foto: req.body.Foto,
-                                    request: {
-                                        tipo: 'GET',
-                                        descricao: 'Retorna todos os Centros',
-                                        url: 'http://localhost:3333/gestor'
-                                    }
+                        //Ver se Já existe esse Email gravado
+                        conn.query(
+                            `SELECT * FROM gestor WHERE Email = ?`,
+                            [req.body.Email],
+                            (error, result) => {
+                                if (error) {
+                                    return res.status(500).send({
+                                        error: error
+                                    })
                                 }
+                
+                                if (result.length > 0) {
+                                    return res.status(409).send({
+                                        mensagem: 'Gestor já Cadastrado'
+                                    })
+                                } else {
+                                    bcrypt.hash(req.body.Senha, 10, (errBcrypt, hash) => {
+                                        if (errBcrypt) {
+                                            return res.status(500).send({
+                                                error: errBcrypt
+                                            })
+                                        }
+
+                                        //INSERIR NO BANCO DE DADO
+                                        conn.query(
+                                            `INSERT INTO gestor (idAdmin, idCentro, NomeGestor, Senha, Login, Email, Celular1, Celular2, Celular3, Endereco,
+                                                Sexo, Foto) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)`,
+                                            [req.body.idAdmin, req.body.idCentro, req.body.NomeGestor, hash, req.body.Login, req.body.Email, req.body.Celular1, 
+                                                req.body.Celular2, req.body.Celular3, req.body.Endereco, req.body.Sexo, req.body.Foto],
+                                            (error, result, field) => {
+                                                conn.release();
+                                
+                                                if (error) {
+                                                    return res.status(500).send({
+                                                        error: error
+                                                    });
+                                                }
+                                
+                                                const response = {
+                                                    mensagem: 'Gestor inserido com sucesso',
+                                                    gestorCriado: {
+                                                        idGestor: result.idGestor,
+                                                        idAdmin: req.idAdmin,
+                                                        idCentro: req.idCentro,
+                                                        Nome: req.body.NomeGestor,
+                                                        Login: req.body.Login,
+                                                        Email: req.body.Email,
+                                                        Celular1: req.body.Celular1,
+                                                        Celular2: req.body.Celular2,
+                                                        Celular3: req.body.Celular3,
+                                                        Endereco: req.body.Endereco,
+                                                        Sexo: req.body.Sexo,
+                                                        Foto: req.body.Foto,
+                                                        request: {
+                                                            tipo: 'GET',
+                                                            descricao: 'Retorna todos os Gestores',
+                                                            url: 'http://localhost:3333/gestor'
+                                                        }
+                                                    }
+                                                }
+                                
+                                                return res.status(201).send(response);
+                                            }
+                                        )
+                                    }
+                                )}
                             }
-            
-                            return res.status(201).send(response);
-                        }
-                    )
-                })
-        })
-    })
+                        )
+                    }
+                )
+            }
+        )
+    });
 });
 
 // RETORNA OS DADOS DE UM GESTOR
@@ -219,7 +250,7 @@ router.get('/:idGestor', (req, res, next) => {
                         idGestor: result[0].idGestor,
                         idAdmin: result[0].idAdmin,
                         idCentro: result[0].idCentro,
-                        Nome: result[0].Nome,
+                        Nome: result[0].NomeGestor,
                         Senha: result[0].Senha,
                         Login: result[0].Login,
                         Email: result[0].Email,
@@ -256,7 +287,7 @@ router.patch('/', (req, res, next) =>{
         conn.query(
             `UPDATE gestor
                 SET idCentro   = ?,
-                    Nome       = ?,
+                    NomeGestor = ?,
                     Senha      = ?,
                     Login      = ?,
                     Email      = ?,
@@ -265,11 +296,11 @@ router.patch('/', (req, res, next) =>{
                     Celular3   = ?,
                     Endereco   = ?,
                     Sexo       = ?,
-                    Foto       = ?,
+                    Foto       = ?
                 WHERE idGestor = ?`,                
             [
                 req.body.idCentro,
-                req.body.Nome, 
+                req.body.NomeGestor, 
                 req.body.Senha,
                 req.body.Login,
                 req.body.Email,
@@ -297,7 +328,7 @@ router.patch('/', (req, res, next) =>{
                         idGestor: req.body.idGestor,
                         idAdmin: req.body.idAdmin,
                         idCentro: req.body.idCentro,
-                        Nome: req.body.Nome,
+                        Nome: req.body.NomeGestor,
                         Senha: req.body.Senha,
                         Login: req.body.Login,
                         Email: req.body.Email,
@@ -331,7 +362,7 @@ router.delete('/', (req, res, next) =>{
             }) 
         }
         conn.query(
-            'DELETE FROM gestor WHERE idGestor = ?',                
+            `SELECT * FROM gestor WHERE idGestor = ?`,                
             [ req.body.idGestor],
 
             (error, result, field) => {
@@ -340,7 +371,7 @@ router.delete('/', (req, res, next) =>{
                 if (error) {
                     return res.status(500).send({
                         error: error
-                    });
+                    })
                 }
 
                 if (result.length == 0) {
@@ -348,31 +379,52 @@ router.delete('/', (req, res, next) =>{
                         mensagem: 'Não foi encontrado o Gestor com este ID'
                     })
                 }
+        
+                conn.query(
+                    'DELETE FROM gestor WHERE idGestor = ?',                
+                    [ req.body.idGestor],
 
-                const response = {
-                    mensagem: 'Gestor removido com sucesso',
-                    request: {
-                        tipo: 'DELETE',
-                        descricao: 'Apaga um Gestor',
-                        url: 'http://localhost:3333/Gestor',
-                        body: {
-                            idAdmin: 'Number',
-                            idCentro: 'Number',
-                            Nome: 'String',
-                            Senha: 'String',
-                            Login: 'String',
-                            Email: 'String',
-                            Celular1: 'Number',
-                            Celular2: 'Number',
-                            Celular3: 'Number',
-                            Endereco: 'String',
-                            Sexo: 'String',
-                            Foto: 'String',
+                    (error, result, field) => {
+                        conn.release();
+
+                        if (error) {
+                            return res.status(500).send({
+                                error: error
+                            });
                         }
-                    }
-                }
 
-                return res.status(202).send(response);
+                        if (result.length == 0) {
+                            return res.status(404).send({
+                                mensagem: 'Não foi encontrado o Gestor com este ID'
+                            })
+                        }
+
+                        const response = {
+                            mensagem: 'Gestor removido com sucesso',
+                            request: {
+                                tipo: 'DELETE',
+                                descricao: 'Apaga um Gestor',
+                                url: 'http://localhost:3333/Gestor',
+                                body: {
+                                    idAdmin: 'Number',
+                                    idCentro: 'Number',
+                                    Nome: 'String',
+                                    Senha: 'String',
+                                    Login: 'String',
+                                    Email: 'String',
+                                    Celular1: 'Number',
+                                    Celular2: 'Number',
+                                    Celular3: 'Number',
+                                    Endereco: 'String',
+                                    Sexo: 'String',
+                                    Foto: 'String',
+                                }
+                            }
+                        }
+
+                        return res.status(202).send(response);
+                    }
+                )
             }
         )
     })

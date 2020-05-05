@@ -3,6 +3,9 @@ const router = express.Router();
 //Importar Conexão mysql
 const mysql = require('../mysql').pool;
 
+//Importar Criptografia Hash(bcrypt)
+const bcrypt = require('bcrypt');
+
 
 //RETORNA TODOS OS ADMINISTRADORES
 router.get('/', (req, res, next) => {
@@ -32,7 +35,7 @@ router.get('/', (req, res, next) => {
                     admins: result.map(admin => {
                         return {
                             idAdmin: admin.idAdmin,
-                            Nome: admin.Nome,
+                            Nome: admin.NomeAdmin,
                             Login: admin.Login,
                             Senha: admin.Senha,
                             Email: admin.Email,
@@ -67,45 +70,71 @@ router.post('/', (req, res, next) =>{
     //
 
     //INSERIR NO BANCO DE DADOS
-    mysql.getConnection((error, conn) => {
-        if (error) { 
+    mysql.getConnection((err, conn) => {
+        if (err) { 
             return res.status(500).send({ 
                 error: error
             }) 
         }
+        
+        //Ver se Já existe esse Email gravado
         conn.query(
-            'INSERT INTO admin (Nome, Login, Senha, Email) VALUES (?,?,?,?)',
-            [req.body.Nome, req.body.Login, req.body.Senha, req.body.Email],
-            (error, result, field) => {
-                conn.release();
-
+            `SELECT * FROM admin WHERE Email = ?`,
+            [req.body.Email],
+            (error, result) => {
                 if (error) {
                     return res.status(500).send({
                         error: error
+                    })
+                }
+
+                if (result.length > 0) {
+                    return res.status(409).send({
+                        mensagem: 'Administrador já Cadastrado'
+                    })
+                } else {
+                    bcrypt.hash(req.body.Senha, 10, (errBcrypt, hash) => {
+                        if (errBcrypt) {
+                            return res.status(500).send({
+                                error: errBcrypt
+                            })
+                        }
+                    
+                        conn.query(
+                            `INSERT INTO admin (NomeAdmin, Login, Senha, Email) VALUES (?,?,?,?)`,
+                            [req.body.NomeAdmin, req.body.Login, hash, req.body.Email],
+                            (error, result) => {
+                                conn.release();
+            
+                                if (error) {
+                                    return res.status(500).send({
+                                        error: error
+                                    })
+                                }
+            
+                                response = {
+                                    mensagem: 'Administrador inserido com sucesso',
+                                    adminCriado: {
+                                        idAdmin: result.idAdmin,
+                                        Nome: req.body.NomeAdmin,
+                                        Login: req.body.Login,
+                                        Email: req.body.Email,
+                                        request: {
+                                            tipo: 'GET',
+                                            descricao: 'Retorna todos os Administradores',
+                                            url: 'http://localhost:3333/admin'
+                                        }
+                                    }
+                                }
+            
+                                return res.status(201).send(response);
+                            })
                     });
                 }
-
-                const response = {
-                    mensagem: 'Administrador inserido com sucesso',
-                    adminCriado: {
-                        idAdmin: result.idAdmin,
-                        Nome: req.body.Nome,
-                        Login: req.body.Login,
-                        Senha: req.body.Senha,
-                        Email: req.body.Email,
-                        request: {
-                            tipo: 'GET',
-                            descricao: 'Retorna todos os Administradores',
-                            url: 'http://localhost:3333/admin'
-                        }
-                    }
-                }
-
-                return res.status(201).send(response);
             }
         )
-    })
-});
+    });
+})
 
 // RETORNA OS DADOS DE UM ADMINISTRADOR ESPECIFICO
 router.get('/:idAdmin', (req, res, next) => {
@@ -136,7 +165,7 @@ router.get('/:idAdmin', (req, res, next) => {
                 const response = {
                     adminCriado: {
                         idAdmin: result[0].idAdmin,
-                        Nome: result[0].Nome,
+                        Nome: result[0].NomeAdmin,
                         Login: result[0].Login,
                         Senha: result[0].Senha,
                         Email: result[0].Email,
@@ -154,7 +183,7 @@ router.get('/:idAdmin', (req, res, next) => {
     })
 });
 
-//ALTERA UM PRODUTO
+//ALTERA UM Administrador
 router.patch('/', (req, res, next) =>{
     
     mysql.getConnection((error, conn) => {
@@ -166,13 +195,13 @@ router.patch('/', (req, res, next) =>{
         
         conn.query(
             `UPDATE admin
-                SET Nome        = ?,
+                SET NomeAdmin   = ?,
                     Login       = ?,
                     Senha       = ?,
                     Email       = ?
                 WHERE idAdmin   = ?`,                
             [
-                req.body.Nome, 
+                req.body.NomeAdmin, 
                 req.body.Login, 
                 req.body.Senha, 
                 req.body.Email, 
@@ -192,7 +221,7 @@ router.patch('/', (req, res, next) =>{
                     mensagem: 'Administrador atualizado com sucesso',
                     adminAtualizado: {
                         idAdmin: req.body.idAdmin,
-                        Nome: req.body.Nome,
+                        Nome: req.body.NomeAdmin,
                         Login: req.body.Login,
                         Senha: req.body.Senha,
                         Email: req.body.Email,
@@ -220,7 +249,7 @@ router.delete('/', (req, res, next) =>{
             }) 
         }
         conn.query(
-            'DELETE FROM admin WHERE idAdmin = ?',                
+            `SELECT * FROM admin WHERE idAdmin = ?`,                
             [ req.body.idAdmin],
 
             (error, result, field) => {
@@ -229,7 +258,7 @@ router.delete('/', (req, res, next) =>{
                 if (error) {
                     return res.status(500).send({
                         error: error
-                    });
+                    })
                 }
 
                 if (result.length == 0) {
@@ -238,22 +267,43 @@ router.delete('/', (req, res, next) =>{
                     })
                 }
 
-                const response = {
-                    mensagem: 'Administrador removido com sucesso',
-                    request: {
-                        tipo: 'DELETE',
-                        descricao: 'Apaga um Administrador',
-                        url: 'http://localhost:3333/admin',
-                        body: {
-                            Nome: 'String',
-                            Login: 'String',
-                            Senha: 'String',
-                            Email: 'String'
-                        }
-                    }
-                }
+                conn.query(
+                    'DELETE FROM admin WHERE idAdmin = ?',                
+                    [ req.body.idAdmin],
 
-                return res.status(202).send(response);
+                    (error, result, field) => {
+                        conn.release();
+
+                        if (error) {
+                            return res.status(500).send({
+                                error: error
+                            });
+                        }
+
+                        if (result.length == 0) {
+                            return res.status(404).send({
+                                mensagem: 'Não foi encontrado o Administrador com este ID'
+                            })
+                        }
+
+                        const response = {
+                            mensagem: 'Administrador removido com sucesso',
+                            request: {
+                                tipo: 'DELETE',
+                                descricao: 'Apaga um Administrador',
+                                url: 'http://localhost:3333/admin',
+                                body: {
+                                    Nome: 'String',
+                                    Login: 'String',
+                                    Senha: 'String',
+                                    Email: 'String'
+                                }
+                            }
+                        }
+
+                        return res.status(202).send(response);
+                    }
+                )
             }
         )
     })

@@ -11,6 +11,7 @@ const morgan = require('morgan');
 //importar módulo de Segurança (cors)
 const cors = require('cors');
 
+//routes.use('/uploads', express.static('uploads'));
 
 //Metodo de Teste 
 /*

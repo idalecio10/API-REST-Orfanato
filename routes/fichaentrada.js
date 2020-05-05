@@ -138,11 +138,13 @@ router.post('/', (req, res, next) =>{
 
                                 //INSERIR NO BANCO DE DADO
                                 conn.query(
-                                    `INSERT INTO fichaentrada (idMenino, idGestor, idCentro, NomeFamiliares, DataFicha, Celular1, Celular2, Celular3, PessoasLocalizacao
+                                    `INSERT INTO fichaentrada (idMenino, idGestor, idCentro, NomeFamiliares, DataFicha, Celular1, Celular2, Celular3, PessoasLocalizacao,
                                         NumeroEncontros, MotivoSaidaMenino, SituacaoSocialFamilia, SituacaoEconomicaFamilia, ReacaoMeninoFamiliaEncontro,
-                                        FamiliaFrequentaIgreja, RelacaoMeninoFamilia, Obs) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
-                                    [req.body.idAdmin, req.body.idCentro, req.body.Nome, req.body.Senha, req.body.Login, req.body.Email, req.body.Celular1, 
-                                        req.body.Celular2, req.body.Celular3, req.body.Endereco, req.body.Sexo, req.body.Foto],
+                                        FamiliaFrequentaIgreja, RelacaoMeninoFamilia, Obs) VALUES (?,?,?,?,now(),?,?,?,?,?,?,?,?,?,?,?,?)`,
+                                    [req.body.idMenino, req.body.idGestor, req.body.idCentro, req.body.NomeFamiliares, req.body.Celular1, 
+                                        req.body.Celular2, req.body.Celular3, req.body.PessoasLocalizacao, req.body.NumeroEncontros, req.body.MotivoSaidaMenino,
+                                            req.body.SituacaoSocialFamilia, req.body.SituacaoEconomicaFamilia, req.body.ReacaoMeninoFamiliaEncontro, 
+                                                req.body.FamiliaFrequentaIgreja, req.body.RelacaoMeninoFamilia, req.body.Obs],
                                     (error, result, field) => {
                                         conn.release();
                         
@@ -269,14 +271,14 @@ router.patch('/', (req, res, next) =>{
                     Celular2                     = ?,
                     Celular3                     = ?,
                     PessoasLocalizacao           = ?,
-                    NumeroEncontros              = ?,
+                    NumeroEncontros               = ?,
                     MotivoSaidaMenino            = ?,
                     SituacaoSocialFamilia        = ?,
                     SituacaoEconomicaFamilia     = ?,
                     ReacaoMeninoFamiliaEncontro  = ?,
                     FamiliaFrequentaIgreja       = ?,
                     RelacaoMeninoFamilia         = ?,
-                    Obs                          = ?,
+                    Obs                          = ?
                 WHERE idFichaEntrada             = ?`,                
             [
                 req.body.idCentro,
@@ -351,7 +353,7 @@ router.delete('/', (req, res, next) =>{
             }) 
         }
         conn.query(
-            'DELETE FROM fichaentrada WHERE idFichaEntrada = ?',                
+            `SELECT * FROM fichaentrada WHERE idFichaEntrada = ?`,                
             [ req.body.idFichaEntrada],
 
             (error, result, field) => {
@@ -360,7 +362,7 @@ router.delete('/', (req, res, next) =>{
                 if (error) {
                     return res.status(500).send({
                         error: error
-                    });
+                    })
                 }
 
                 if (result.length == 0) {
@@ -369,35 +371,56 @@ router.delete('/', (req, res, next) =>{
                     })
                 }
 
-                const response = {
-                    mensagem: 'Ficha de Entrada removido com sucesso',
-                    request: {
-                        tipo: 'DELETE',
-                        descricao: 'Apaga uma Ficha de Entrada',
-                        url: 'http://localhost:3333/fichaentrada',
-                        body: {
-                            idMenino: 'Number',
-                            idGestor: 'Number',
-                            idCentro: 'Number',
-                            NomeFamiliares: 'String',
-                            DataFicha: 'String',
-                            Celular1: 'Number',
-                            Celular2: 'Number',
-                            Celular3: 'Number',
-                            PessoasLocalizacao: 'String',
-                            NumeroEncontros: 'String',
-                            MotivoSaidaMenino: 'String',
-                            SituacaoSocialFamilia: 'String',Login: 'String',
-                            SituacaoEconomicaFamilia: 'String',
-                            ReacaoMeninoFamiliaEncontro: 'String',
-                            FamiliaFrequentaIgreja: 'String',
-                            RelacaoMeninoFamilia: 'String',
-                            Obs: 'String',
-                        }
-                    }
-                }
+                conn.query(
+                    'DELETE FROM fichaentrada WHERE idFichaEntrada = ?',                
+                    [ req.body.idFichaEntrada],
 
-                return res.status(202).send(response);
+                    (error, result, field) => {
+                        conn.release();
+
+                        if (error) {
+                            return res.status(500).send({
+                                error: error
+                            });
+                        }
+
+                        if (result.length == 0) {
+                            return res.status(404).send({
+                                mensagem: 'Não foi encontrado a Ficha de Entrada com este ID'
+                            })
+                        }
+
+                        const response = {
+                            mensagem: 'Ficha de Entrada removido com sucesso',
+                            request: {
+                                tipo: 'DELETE',
+                                descricao: 'Apaga uma Ficha de Entrada',
+                                url: 'http://localhost:3333/fichaentrada',
+                                body: {
+                                    idMenino: 'Number',
+                                    idGestor: 'Number',
+                                    idCentro: 'Number',
+                                    NomeFamiliares: 'String',
+                                    DataFicha: 'String',
+                                    Celular1: 'Number',
+                                    Celular2: 'Number',
+                                    Celular3: 'Number',
+                                    PessoasLocalizacao: 'String',
+                                    NumeroEncontros: 'String',
+                                    MotivoSaidaMenino: 'String',
+                                    SituacaoSocialFamilia: 'String',Login: 'String',
+                                    SituacaoEconomicaFamilia: 'String',
+                                    ReacaoMeninoFamiliaEncontro: 'String',
+                                    FamiliaFrequentaIgreja: 'String',
+                                    RelacaoMeninoFamilia: 'String',
+                                    Obs: 'String',
+                                }
+                            }
+                        }
+
+                        return res.status(202).send(response);
+                    }
+                )
             }
         )
     })
