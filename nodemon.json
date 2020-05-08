@@ -4,6 +4,8 @@
         "MYSQL_PASSWORD" : "G]W0e{i)racG",
         "MYSQL_DATABASE" : "refugio", 
         "MYSQL_HOST" : "localhost",
-        "MYSQL_PORT" : 3306
+        "MYSQL_PORT" : 3306,
+
+        "JWT_KEY" : "segredo"
     }
 }
