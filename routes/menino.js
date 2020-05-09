@@ -8,9 +8,15 @@ const multer = require('multer');
 //Importar configurações do Multer
 const multerConfig = require('../src/config/multer');
 
+//Importar middleware loginAdmin
+const loginAdmin = require('../middleware/loginAdmin');
+
+//Importar middleware loginGestor
+const loginGestor = require('../middleware/loginGestor');
+
 
 //RETORNA TODOS OS MENINOS
-router.get('/', (req, res, next) => {
+router.get('/', loginAdmin.obrigatorio, loginGestor.obrigatorio, (req, res, next) => {
     /*res.status(200).send({
         mensagem: 'Retorna todos os Meninos'
     });*/
@@ -78,8 +84,13 @@ router.get('/', (req, res, next) => {
 
 
 //INSERE UM MENINO
-router.post('/', multer(multerConfig).single("Foto"), (req, res, next) =>{
+router.post('/', loginAdmin.obrigatorio, loginGestor.obrigatorio, multer(multerConfig).single("Foto"), (req, res, next) =>{
+    //Mostrar dados da Foto
     console.log(req.file); 
+
+    //Os dados de quem acessou
+    //console.log(req.usuario); 
+
     // Exemplo do Body-Parser ou só essa linha app.use(express.json());
     /*const Centro = {
         nome: request.body.nome,
@@ -154,7 +165,7 @@ router.post('/', multer(multerConfig).single("Foto"), (req, res, next) =>{
 });
 
 // RETORNA OS DADOS DE UM MENINO
-router.get('/:idMenino', (req, res, next) => {
+router.get('/:idMenino', loginAdmin.obrigatorio, loginGestor.obrigatorio, (req, res, next) => {
 
     mysql.getConnection((error, conn) => {
         if (error) { 
@@ -204,7 +215,7 @@ router.get('/:idMenino', (req, res, next) => {
 });
 
 //ALTERA UM MENINO
-router.patch('/', (req, res, next) =>{
+router.patch('/', loginAdmin.obrigatorio, loginGestor.obrigatorio, (req, res, next) =>{
     
     mysql.getConnection((error, conn) => {
         if (error) { 
@@ -263,7 +274,7 @@ router.patch('/', (req, res, next) =>{
 });
 
 //EXCLUI UM MENINO
-router.delete('/', (req, res, next) =>{
+router.delete('/', loginAdmin.obrigatorio, loginGestor.obrigatorio, (req, res, next) =>{
     
     mysql.getConnection((error, conn) => {
         if (error) { 

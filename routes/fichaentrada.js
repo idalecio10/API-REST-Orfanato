@@ -3,9 +3,19 @@ const router = express.Router();
 //Importar Conexão mysql
 const mysql = require('../mysql').pool;
 
+//Importar middleware loginAdmin
+const loginAdmin = require('../middleware/loginAdmin');
+
+//Importar middleware loginGestor
+const loginGestor = require('../middleware/loginGestor');
+
 
 //RETORNA TODAS AS FICHAS DE ENTRADA
-router.get('/', (req, res, next) => {
+router.get('/', loginAdmin.obrigatorio, loginGestor.obrigatorio, (req, res, next) => {
+    
+    //Os dados de quem acessou
+    //console.log(req.usuario); 
+    
     /*res.status(200).send({
         mensagem: 'Retorna todos as Fichas de Entrada'
     });*/
@@ -66,7 +76,11 @@ router.get('/', (req, res, next) => {
 
 
 //INSERE UMA FICHA DE ENTRADA
-router.post('/', (req, res, next) =>{
+router.post('/', loginAdmin.obrigatorio, loginGestor.obrigatorio, (req, res, next) =>{
+    
+    //Os dados de quem acessou
+    //console.log(req.usuario); 
+    
     // Exemplo do Body-Parser ou só essa linha app.use(express.json());
     /*const Centro = {
         nome: request.body.nome,
@@ -193,7 +207,10 @@ router.post('/', (req, res, next) =>{
 });
 
 // RETORNA OS DADOS DE UMA FICHA DE ENTRADA
-router.get('/:idFichaEntrada', (req, res, next) => {
+router.get('/:idFichaEntrada', loginAdmin.obrigatorio, loginGestor.obrigatorio, (req, res, next) => {
+
+    //Os dados de quem acessou
+    //console.log(req.usuario); 
 
     mysql.getConnection((error, conn) => {
         if (error) { 
@@ -253,7 +270,7 @@ router.get('/:idFichaEntrada', (req, res, next) => {
 });
 
 //ALTERA UMA FICHA DE ENTRADA
-router.patch('/', (req, res, next) =>{
+router.patch('/', loginAdmin.obrigatorio, loginGestor.obrigatorio, (req, res, next) =>{
     
     mysql.getConnection((error, conn) => {
         if (error) { 
@@ -344,7 +361,7 @@ router.patch('/', (req, res, next) =>{
 });
 
 //EXCLUI UMA FICHA DE ENTRADA
-router.delete('/', (req, res, next) =>{
+router.delete('/', loginAdmin.obrigatorio, loginGestor.obrigatorio, (req, res, next) =>{
     
     mysql.getConnection((error, conn) => {
         if (error) { 

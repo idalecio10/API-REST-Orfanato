@@ -3,9 +3,17 @@ const router = express.Router();
 //Importar Conexão mysql
 const mysql = require('../mysql').pool;
 
+//Importar Multer para Upload de Imagem
+const multer = require('multer');
+//Importar configurações do Multer
+const multerConfig = require('../src/config/multer');
+
+//Importar middleware loginAdmin
+const loginAdmin = require('../middleware/loginAdmin');
+
 
 //RETORNA TODOS OS CENTROS
-router.get('/', (req, res, next) => {
+router.get('/', loginAdmin.obrigatorio, (req, res, next) => {
     /*res.status(200).send({
         mensagem: 'Retorna todos os Centros'
     });*/
@@ -20,6 +28,7 @@ router.get('/', (req, res, next) => {
             `SELECT     centro.idCentro,
                         centro.NomeCentro,
                         centro.Endereco,
+                        centro.Foto,
                         admin.idAdmin,
                         admin.NomeAdmin
             FROM        centro
@@ -40,6 +49,7 @@ router.get('/', (req, res, next) => {
                             idCentro: centro.idCentro,
                             Nome: centro.NomeCentro,
                             Endereco: centro.Endereco,
+                            Foto: centro.Foto,
 
                             admin: {
                                 idAdmin: centro.idAdmin,
@@ -65,7 +75,10 @@ router.get('/', (req, res, next) => {
 
 
 //INSERE UM CENTRO
-router.post('/', (req, res, next) =>{
+router.post('/', loginAdmin.obrigatorio, multer(multerConfig).single("Foto"), (req, res, next) =>{
+    //Mostrar dados da Foto
+    console.log(req.file); 
+
     // Exemplo do Body-Parser ou só essa linha app.use(express.json());
     /*const Centro = {
         nome: request.body.nome,
@@ -101,8 +114,8 @@ router.post('/', (req, res, next) =>{
 
                 //INSERIR NO BANCO DE DADO
                 conn.query(
-                    'INSERT INTO centro (idAdmin, NomeCentro, Endereco) VALUES (?,?,?)',
-                    [req.body.idAdmin, req.body.NomeCentro, req.body.Endereco],
+                    'INSERT INTO centro (idAdmin, NomeCentro, Endereco, Foto) VALUES (?,?,?,?)',
+                    [req.body.idAdmin, req.body.NomeCentro, req.body.Endereco, req.file.path],
                     (error, result, field) => {
                         conn.release();
         
@@ -119,6 +132,7 @@ router.post('/', (req, res, next) =>{
                                 idAdmin: req.idAdmin,
                                 Nome: req.body.NomeCentro,
                                 Endereco: req.body.Endereco,
+                                Foto: req.file.path,
                                 request: {
                                     tipo: 'GET',
                                     descricao: 'Retorna todos os Centros',
@@ -136,7 +150,7 @@ router.post('/', (req, res, next) =>{
 });
 
 // RETORNA OS DADOS DE UM CENTRO
-router.get('/:idCentro', (req, res, next) => {
+router.get('/:idCentro', loginAdmin.obrigatorio, (req, res, next) => {
 
     mysql.getConnection((error, conn) => {
         if (error) { 
@@ -167,6 +181,7 @@ router.get('/:idCentro', (req, res, next) => {
                         idAdmin: result[0].idAdmin,
                         Nome: result[0].NomeCentro,
                         Endereco: result[0].Endereco,
+                        Foto: result[0].Foto,
                         request: {
                             tipo: 'GET ',
                             descricao: 'Retorna os detalhes de um Centro especifico',
@@ -182,7 +197,7 @@ router.get('/:idCentro', (req, res, next) => {
 });
 
 //ALTERA UM CENTRO
-router.patch('/', (req, res, next) =>{
+router.patch('/', loginAdmin.obrigatorio, (req, res, next) =>{
     
     mysql.getConnection((error, conn) => {
         if (error) { 
@@ -195,10 +210,12 @@ router.patch('/', (req, res, next) =>{
             `UPDATE centro
                 SET NomeCentro = ?,
                     Endereco   = ?
+                    Foto       = ?
                 WHERE idCentro = ?`,                
             [
                 req.body.NomeCentro, 
                 req.body.Endereco, 
+                req.body.Foto, 
                 req.body.idCentro
             ],
 
@@ -217,6 +234,7 @@ router.patch('/', (req, res, next) =>{
                         idCentro: req.body.idCentro,
                         Nome: req.body.NomeCentro,
                         Endereco: req.body.Endereco,
+                        Foto: req.body.Foto,
                         request: {
                             tipo: 'PATCH',
                             descricao: 'Retorna os detalhes de um Centro especifico',
@@ -232,7 +250,7 @@ router.patch('/', (req, res, next) =>{
 });
 
 //EXCLUI UM PRODUTO
-router.delete('/', (req, res, next) =>{
+router.delete('/', loginAdmin.obrigatorio, (req, res, next) =>{
     
     mysql.getConnection((error, conn) => {
         if (error) { 
@@ -281,7 +299,8 @@ router.delete('/', (req, res, next) =>{
                                 body: {
                                     idAdmin: 'Number',
                                     Nome: 'String',
-                                    Endereco: 'String'
+                                    Endereco: 'String',
+                                    Foto: 'String',
                                 }
                             }
                         }

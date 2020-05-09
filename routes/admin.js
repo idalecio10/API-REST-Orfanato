@@ -9,6 +9,9 @@ const bcrypt = require('bcrypt');
 //Importar JsonWebToken
 const jwt = require('jsonwebtoken');
 
+//Importar middleware loginAdmin
+const loginAdmin = require('../middleware/loginAdmin');
+
 
 
 //FAZER LOGOUT (OPCIONAL ATÉ PORQUE NO CLIENT-SIDE É POSSIVEL DESTRUIR O COOKIE DE AUTENTICAÇÃO)
@@ -54,9 +57,9 @@ router.post('/login', (req, res, next) => {
                         const token = jwt.sign({
                             // PAYLOAD
                             idAdmin: results[0].idAdmin,
-                            //NomeAdmin: results[0].NomeAdmin,
-                            //Login: results[0].Login,
-                            //Email: results[0].Email,
+                            NomeAdmin: results[0].NomeAdmin,
+                            Login: results[0].Login,
+                            Email: results[0].Email,
                             //FIM PAYLOAD
                         }, 
                         process.env.JWT_KEY,
@@ -87,7 +90,7 @@ router.post('/login', (req, res, next) => {
 
 
 //RETORNA TODOS OS ADMINISTRADORES
-router.get('/', (req, res, next) => {
+router.get('/', loginAdmin.obrigatorio, (req, res, next) => {
     /*res.status(200).send({
         mensagem: 'Retorna todos os Admin'
     });
@@ -139,7 +142,7 @@ router.get('/', (req, res, next) => {
 
 
 //INSERE UM ADMINISTRADOR
-router.post('/', (req, res, next) =>{
+router.post('/', loginAdmin.obrigatorio, (req, res, next) =>{
     // Exemplo do Body-Parser ou só essa linha app.use(express.json());
     /*const Admin = {
         nome: request.body.nome,
@@ -220,7 +223,7 @@ router.post('/', (req, res, next) =>{
 
 
 // RETORNA OS DADOS DE UM ADMINISTRADOR ESPECIFICO
-router.get('/:idAdmin', (req, res, next) => {
+router.get('/:idAdmin', loginAdmin.obrigatorio, (req, res, next) => {
     
     mysql.getConnection((error, conn) => {
         if (error) { 
@@ -267,7 +270,7 @@ router.get('/:idAdmin', (req, res, next) => {
 });
 
 //ALTERA UM Administrador
-router.patch('/', (req, res, next) =>{
+router.patch('/', loginAdmin.obrigatorio, (req, res, next) =>{
     
     mysql.getConnection((error, conn) => {
         if (error) { 
@@ -323,7 +326,7 @@ router.patch('/', (req, res, next) =>{
 });
 
 //EXCLUI UM PRODUTO
-router.delete('/', (req, res, next) =>{
+router.delete('/', loginAdmin.obrigatorio, (req, res, next) =>{
     
     mysql.getConnection((error, conn) => {
         if (error) { 

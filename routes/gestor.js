@@ -6,9 +6,92 @@ const mysql = require('../mysql').pool;
 //Importar Criptografia Hash(bcrypt)
 const bcrypt = require('bcrypt');
 
+//Importar JsonWebToken
+const jwt = require('jsonwebtoken');
+
+//Importar middleware loginAdmin
+const loginAdmin = require('../middleware/loginAdmin');
+
+
+
+//FAZER LOGOUT (OPCIONAL ATÉ PORQUE NO CLIENT-SIDE É POSSIVEL DESTRUIR O COOKIE DE AUTENTICAÇÃO)
+router.get('/logout', (req, res, next) => {
+    res.status(200).send({ auth: false, token: null });
+  });
+  
+  
+//FAZER O LOGIN
+router.post('/login', (req, res, next) => {
+    mysql.getConnection((error, conn) => {
+        if (error) { 
+            return res.status(500).send({ 
+                error: error 
+            }) 
+        }
+        conn.query(
+            'SELECT * FROM gestor WHERE Login = ?;',
+            [req.body.Login],
+            (error, results, fields) =>  {
+                conn.release();
+  
+                if (error) { 
+                    return res.status(500).send({ 
+                        error: error 
+                    }) 
+                }
+  
+                if (results.length < 1) {
+                    return res.status(401).send({
+                        mensagem: 'User not Found'
+                    })
+                }
+                //Comparar bcrypt
+                bcrypt.compare(req.body.Senha, results[0].Senha, (err, result) => {
+                    if (err) {
+                        return res.status(401).send({
+                            mensagem: 'Invalid Password'
+                        })
+                    }
+                    if (result) {
+                        //Usando JWT
+                        const token = jwt.sign({
+                            // PAYLOAD
+                            idGestor: results[0].idGestor,
+                            NomeGestor: results[0].NomeGestor,
+                            Login: results[0].Login,
+                            Email: results[0].Email,
+                            //FIM PAYLOAD
+                        }, 
+                        process.env.JWT_KEY,
+                        {
+                            expiresIn: "1h",
+                        });
+                        //
+                        return res.status(200).send({
+                            mensagem: 'Autenticado com sucesso',
+                            NomeGestor: results[0].NomeGestor,
+                            Login: results[0].Login,
+                            Email: results[0].Email,
+                            //
+                            token: token
+                            //
+                        });
+                    }
+  
+                    return res.status(401).send({
+                        mensagem: 'Falha na Autenticação'
+                    })
+                });
+            }
+        );
+    })
+});
+
+
+
 
 //RETORNA TODOS OS CENTROS
-router.get('/', (req, res, next) => {
+router.get('/', loginAdmin.obrigatorio, (req, res, next) => {
     /*res.status(200).send({
         mensagem: 'Retorna todos os Gestores'
     });*/
@@ -92,7 +175,7 @@ router.get('/', (req, res, next) => {
 
 
 //INSERE UM GESTOR
-router.post('/', (req, res, next) =>{
+router.post('/', loginAdmin.obrigatorio, (req, res, next) =>{
     // Exemplo do Body-Parser ou só essa linha app.use(express.json());
     /*const Centro = {
         nome: request.body.nome,
@@ -146,8 +229,8 @@ router.post('/', (req, res, next) =>{
 
                         //Ver se Já existe esse Email gravado
                         conn.query(
-                            `SELECT * FROM gestor WHERE Email = ?`,
-                            [req.body.Email],
+                            `SELECT * FROM gestor WHERE Email = ? OR Login = ?`,
+                            [req.body.Email, req.body.Login],
                             (error, result) => {
                                 if (error) {
                                     return res.status(500).send({
@@ -220,7 +303,7 @@ router.post('/', (req, res, next) =>{
 });
 
 // RETORNA OS DADOS DE UM GESTOR
-router.get('/:idGestor', (req, res, next) => {
+router.get('/:idGestor', loginAdmin.obrigatorio, (req, res, next) => {
 
     mysql.getConnection((error, conn) => {
         if (error) { 
@@ -275,7 +358,7 @@ router.get('/:idGestor', (req, res, next) => {
 });
 
 //ALTERA UM GESTOR
-router.patch('/', (req, res, next) =>{
+router.patch('/', loginAdmin.obrigatorio, (req, res, next) =>{
     
     mysql.getConnection((error, conn) => {
         if (error) { 
@@ -352,8 +435,8 @@ router.patch('/', (req, res, next) =>{
     })
 });
 
-//EXCLUI UM PRODUTO
-router.delete('/', (req, res, next) =>{
+//EXCLUI UM GESTOR
+router.delete('/', loginAdmin.obrigatorio, (req, res, next) =>{
     
     mysql.getConnection((error, conn) => {
         if (error) { 
